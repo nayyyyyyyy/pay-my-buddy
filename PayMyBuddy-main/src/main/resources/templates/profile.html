@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Profil - Pay My Buddy</title>
+
+    <link rel="stylesheet"
+          data-th-href="@{/css/profile.css}"
+          href="../static/css/profile.css">
+</head>
+
+<body>
+
+<header class="topbar">
+    <div class="brand">Pay My Buddy</div>
+
+    <nav class="nav" aria-label="Navigation principale">
+        <a href="/transfer">Transférer</a>
+        <a class="active" href="/profile">Profil</a>
+        <a href="/connections">Ajouter relation</a>
+        <a href="/logout">Se déconnecter</a>
+    </nav>
+</header>
+
+<main class="page">
+    <div class="panel">
+
+        <h1 id="profile-title" class="sr-only">Profil utilisateur</h1>
+
+        <div class="rows">
+            <div class="row">
+                <div class="label">Username</div>
+                <div class="value" data-th-text="${user.username}">@username</div>
+                <div class="chev" aria-hidden="true">›</div>
+            </div>
+
+            <div class="row">
+                <div class="label">Mail</div>
+                <div class="value" data-th-text="${user.email}">nom@domain.com</div>
+                <div class="chev" aria-hidden="true">›</div>
+            </div>
+
+            <div class="row">
+                <div class="label">Mot de passe</div>
+                <div class="value">
+                    <span class="sr-only">Mot de passe masqué</span>
+                    ••••••••
+                </div>
+                <div class="chev" aria-hidden="true">›</div>
+
+                <form class="edit" action="/profile-edit" method="get">
+                    <button type="submit" class="btn">Modifier</button>
+                </form>
+
+                <form class="edit edit-danger"
+                      action="/account/deactivate"
+                      method="post"
+                      onsubmit="return confirm('Confirmer la désactivation de votre compte ?');">
+                    <button type="submit" class="btn btn-danger">Désactiver</button>
+                </form>
+            </div>
+
+            <form action="/recharge" method="get" class="recharge">
+                <button class="btn btn2" type="submit">Recharger</button>
+            </form>
+        </div>
+
+        <p class="error" data-th-if="${error}" data-th-text="${error}"></p>
+
+    </div>
+</main>
+
+</body>
+</html>

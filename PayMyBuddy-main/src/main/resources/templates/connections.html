@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Ajouter relation - Pay My Buddy</title>
+  <link rel="stylesheet"
+        data-th-href="@{/css/connections.css}"
+        href="../static/css/connections.css">
+</head>
+
+<body>
+
+<header class="topbar">
+  <div class="brand">Pay My Buddy</div>
+
+  <nav class="nav">
+    <a href="/transfer">Transférer</a>
+    <a href="/transfer">Profil</a>
+    <a class="active" href="/connections">Ajouter relation</a>
+    <a href="/logout">Se déconnecter</a>
+  </nav>
+</header>
+
+<main class="page">
+  <section class="panel-add" aria-labelledby="panel-add-title">
+
+    <h1 id="panel-add-title" class="sr-only">Ajouter une relation</h1>
+
+    <form class="add-form" action="/connections" method="post">
+      <div class="form-left">
+        <div class="form-title">Chercher une relation</div>
+
+        <label class="sr-only" for="email">Saisir une adresse mail</label>
+        <input id="email"
+               name="email"
+               type="email"
+               placeholder="Saisir une adresse mail"
+               required
+               autocomplete="email">
+      </div>
+
+      <button type="submit" class="btn">Ajouter</button>
+    </form>
+
+    <p class="error" data-th-if="${error}" data-th-text="${error}"></p>
+    <p class="success" data-th-if="${success}" data-th-text="${success}"></p>
+
+  </section>
+</main>
+
+</body>
+</html>

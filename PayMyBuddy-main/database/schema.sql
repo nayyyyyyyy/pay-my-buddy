@@ -1,0 +1,52 @@
+CREATE TABLE users (
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    username     VARCHAR(25)      NOT NULL,
+    email        VARCHAR(70)      NOT NULL,
+    password     VARCHAR(100)     NOT NULL,
+    created_at   TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP        NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    is_active    TINYINT(1)       NOT NULL DEFAULT 1,
+
+    CONSTRAINT pk_user PRIMARY KEY (id),
+    CONSTRAINT uq_username UNIQUE (username),
+    CONSTRAINT uq_email    UNIQUE (email)
+);
+
+CREATE TABLE transactions (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    sender_id     BIGINT UNSIGNED NOT NULL,
+    receiver_id   BIGINT UNSIGNED NOT NULL,
+    description   VARCHAR(255)    NULL,
+    amount        DECIMAL(10,2)   NOT NULL,
+    created_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_transaction PRIMARY KEY (id),
+
+    CONSTRAINT fk_sender
+        FOREIGN KEY (sender_id)
+        REFERENCES users (id)
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_receiver
+        FOREIGN KEY (receiver_id)
+        REFERENCES users (id)
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE user_connection (
+    user_id        BIGINT UNSIGNED NOT NULL,
+    connection_id  BIGINT UNSIGNED NOT NULL,
+    created_at     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_user_connection PRIMARY KEY (user_id, connection_id),
+
+    CONSTRAINT fk_user
+        FOREIGN KEY (user_id)
+        REFERENCES users (id),
+
+    CONSTRAINT fk_connection
+        FOREIGN KEY (connection_id)
+        REFERENCES users (id),
+
+    CONSTRAINT chk_unicity CHECK (user_id <> connection_id)
+);
