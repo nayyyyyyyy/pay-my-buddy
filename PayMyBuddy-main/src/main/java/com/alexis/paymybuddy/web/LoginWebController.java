@@ -20,9 +20,10 @@ public class LoginWebController {
         this.userService = userService;
         this.userRepository = userRepository;
     }
+
     @GetMapping("/")
     public String home() {
-        return "redirect:/login";
+        return "index";
     }
 
     @GetMapping("/login")

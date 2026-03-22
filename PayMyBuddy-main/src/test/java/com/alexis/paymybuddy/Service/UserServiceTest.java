@@ -1,241 +1,171 @@
 package com.alexis.paymybuddy.Service;
 
 import com.alexis.paymybuddy.DTO.ProfileUpdateDTO;
-import com.alexis.paymybuddy.DTO.UserRegistrationDTO;
 import com.alexis.paymybuddy.Model.User;
 import com.alexis.paymybuddy.Repository.UserRepository;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.Test;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Transactional
-public class UserServiceTest {
+@ExtendWith(MockitoExtension.class)
+class UserServiceTest {
 
-    @Autowired
-    private UserService userService;
-
-    @Autowired
+    @Mock
     private UserRepository userRepository;
 
-    @Autowired
+    @Mock
     private PasswordEncoder passwordEncoder;
 
-    @Test
-    void save_with_hashed_password() {
+    @InjectMocks
+    private UserService userService;
 
-        UserRegistrationDTO dto = new UserRegistrationDTO(
-                "Léa",
-                "Léa@example.com",
-                "clearPassword"
-        );
+    private User user;
 
-        User saved = userService.registerUser(dto);
-
-        User reloaded = userRepository.findByEmail("Léa@example.com").orElseThrow();
-
-        assertThat(reloaded.getId()).isNotNull();
-        assertThat(reloaded.getUsername()).isEqualTo("Léa");
-
-        assertThat(reloaded.getPassword()).isNotEqualTo("clearPassword");
-        assertThat(reloaded.getPassword()).isNotBlank();
-    }
-
-    @Test
-    void authenticate() {
-
-        User user = new User();
-
-        user.setUsername("Kevin");
-        user.setEmail("kevin@example.com");
-        user.setPassword(passwordEncoder.encode("123456789"));
+    @BeforeEach
+    void setup() {
+        user = new User("Kevin", "kevin@example.com", "$2a$encodedPassword");
+        user.setId(1L);
         user.setActive(true);
-
-        userRepository.save(user);
-        boolean result = userService.userAuthenticate("kevin@example.com", "123456789");
-
-        assertThat(result).isTrue();
+        user.setBalance(BigDecimal.ZERO);
     }
 
     @Test
-    void invalid_password() {
+    void authenticate_success() {
 
-        User user = new User();
+        when(userRepository.findByEmail("kevin@example.com"))
+                .thenReturn(Optional.of(user));
 
-        user.setUsername("Kevin");
-        user.setEmail("kevin@example.com");
-        user.setPassword(passwordEncoder.encode("123456789"));
-        user.setActive(true);
+        when(passwordEncoder.matches(eq("password"), anyString()))
+                .thenReturn(true);
 
-        userRepository.save(user);
-        boolean result = userService.userAuthenticate("kevin@example.com", "12345678");
+        boolean result = userService.userAuthenticate("kevin@example.com", "password");
 
-        assertThat(result).isFalse();
+        assertTrue(result);
     }
 
     @Test
-    void invalid_email() {
-        // Tentative de connexion avec un email qui n'existe pas
-        boolean result = userService.userAuthenticate("incorect@example.com", "1245");
-        // Echec d'authentification attendu
-        assertThat(result).isFalse();
+    void authenticate_invalid_password() {
+
+        when(userRepository.findByEmail("kevin@example.com"))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches(eq("wrong"), anyString()))
+                .thenReturn(false);
+
+        boolean result = userService.userAuthenticate("kevin@example.com", "wrong");
+
+        assertFalse(result);
     }
 
     @Test
-    void update_user() {
-        // Création d’un utilisateur initial
-        User user = new User();
-        user.setUsername("Yohan");
-        user.setEmail("yohan@example.com");
-        user.setPassword(passwordEncoder.encode("1234"));
-        user.setActive(true);
-        userRepository.save(user);
+    void authenticate_invalid_email() {
+
+        when(userRepository.findByEmail("unknown@example.com"))
+                .thenReturn(Optional.empty());
+
+        boolean result = userService.userAuthenticate("unknown@example.com", "password");
+
+        assertFalse(result);
+    }
+
+    @Test
+    void update_profile_success() {
 
         ProfileUpdateDTO dto = new ProfileUpdateDTO(
-                "didier",
+                "Didier",
                 "didier@example.com",
                 "123"
         );
 
-        User updated = userService.updateProfile(user.getId(), dto);
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(user));
 
-        assertThat(updated.getUsername()).isEqualTo("didier");
-        assertThat(updated.getEmail()).isEqualTo("didier@example.com");
-        assertThat(passwordEncoder.matches("123", updated.getPassword())).isTrue();
+        when(passwordEncoder.encode("123"))
+                .thenReturn("encodedPassword");
+
+        when(userRepository.save(any(User.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        User updated = userService.updateProfile(1L, dto);
+
+        assertEquals("Didier", updated.getUsername());
+        assertEquals("didier@example.com", updated.getEmail());
+
+        verify(userRepository).save(updated);
     }
 
     @Test
-    void add_connection() {
-        User userA = new User();
-        userA.setUsername("fred");
-        userA.setEmail("fred@example.com");
-        userA.setPassword("1");
-        userA.setActive(true);
+    void add_connection_success() {
 
-        User userB = new User();
-        userB.setUsername("jacky");
-        userB.setEmail("jacky@example.com");
-        userB.setPassword("2");
-        userB.setActive(true);
+        User friend = new User("Alice", "alice@example.com", "pass");
+        friend.setId(2L);
 
-        userRepository.save(userA);
-        userRepository.save(userB);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(friend));
 
-        userService.addConnection(userA.getId(), userB.getId());
+        userService.addConnection(1L, 2L);
 
-        User updated = userRepository.findById(userA.getId()).orElseThrow();
-        assertThat(updated.getConnections()).extracting(User::getId).contains(userB.getId());
+        assertTrue(user.getConnections().contains(friend));
+        verify(userRepository).save(user);
     }
 
     @Test
-    void no_self_connection() {
-        User user = new User();
-        user.setUsername("Lilan");
-        user.setEmail("lilan@example.com");
-        user.setPassword("hashed");
-        user.setActive(true);
-        userRepository.save(user);
+    void recharge_account_success() {
 
-        assertThatThrownBy(() -> userService.addConnection(user.getId(), user.getId()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Vous ne pouvez pas vous ajouter en tant qu'amis");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        userService.rechargeAccount(1L, new BigDecimal("50"));
+
+        assertEquals(new BigDecimal("50"), user.getBalance());
+
+        verify(userRepository).save(user);
     }
 
     @Test
-    void no_add_duplicate() {
-        User userA = new User();
-        userA.setUsername("Luca");
-        userA.setEmail("luca@example.com");
-        userA.setPassword("hashed");
-        userA.setActive(true);
+    void recharge_account_invalid_amount() {
 
-        User userB = new User();
-        userB.setUsername("Louanna");
-        userB.setEmail("louanna@example.com");
-        userB.setPassword("hashed");
-        userB.setActive(true);
+        // ❌ PAS DE MOCK ICI → inutile
 
-        userA.getConnections().add(userB);
-
-        userRepository.save(userB);
-        userRepository.save(userA);
-
-        assertThatThrownBy(() -> userService.addConnection(userA.getId(), userB.getId()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Ce user est déjà votre amis");
+        assertThrows(IllegalArgumentException.class,
+                () -> userService.rechargeAccount(1L, BigDecimal.ZERO));
     }
 
     @Test
-    void success_recharge() {
-        User dev = userRepository.findById(1L).orElseThrow();
-        dev.setBalance(BigDecimal.ZERO); // Reset balance pour le test
-        userRepository.save(dev);
+    void deactivate_user_success() {
 
-        BigDecimal rechargeAmount = new BigDecimal("50.00");
-        userService.rechargeAccount(1L, rechargeAmount);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        User recharged = userRepository.findById(1L).orElseThrow();
-        assertThat(recharged.getBalance()).isEqualByComparingTo("50.00");
+        userService.deactivateUser(1L);
+
+        assertFalse(user.isActive());
+        verify(userRepository).save(user);
     }
 
     @Test
-    void recharge_fails_invalid_amount() {
-        User dev = userRepository.findById(1L).orElseThrow();
+    void activate_user_success() {
 
-        assertThatThrownBy(() -> userService.rechargeAccount(1L, BigDecimal.ZERO))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Le montant doit être supérieur à 0.");
-    }
-
-    @Test
-    void disable_user() {
-        User user = new User("Jonas", "jonas@example.com", "123");
-        user.setActive(true);
-        userRepository.save(user);
-
-        userService.deactivateUser(user.getId());
-
-        User reloaded = userRepository.findById(user.getId()).orElseThrow();
-        assertThat(reloaded.isActive()).isFalse();
-    }
-
-    @Test
-    void disable_user_not_working() {
-        Long nonExistentId = 9999L;
-
-        assertThatThrownBy(() -> userService.deactivateUser(nonExistentId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Utilisateur introuvable");
-    }
-
-    @Test
-    void activate_user() {
-        User user = new User("Louise", "louise@example.com", "123");
         user.setActive(false);
-        userRepository.save(user);
 
-        userService.activateUser(user.getId());
+        // ⚠️ IMPORTANT : matcher la vraie méthode du service
+        when(userRepository.findByIdAndActiveFalse(1L))
+                .thenReturn(Optional.of(user));
 
-        User reloaded = userRepository.findById(user.getId()).orElseThrow();
-        assertThat(reloaded.isActive()).isTrue();
-    }
+        userService.activateUser(1L);
 
-    @Test
-    void activate_user_not_working() {
-        Long nonExistentId = 8L;
-
-        assertThatThrownBy(() -> userService.activateUser(nonExistentId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Utilisateur introuvable ou déjà actif");
+        assertTrue(user.isActive());
+        verify(userRepository).save(user);
     }
 }

@@ -34,6 +34,10 @@ public class TransactionService {
         User receiver = userRepository.findByIdAndActiveTrue(dto.getReceiverId())
                 .orElseThrow(() -> new IllegalArgumentException("Destinataire introuvable ou inactif"));
 
+        if (sender.getId().equals(receiver.getId())) {
+            throw new IllegalArgumentException("Impossible de se transférer de l'argent à soi-même");
+        }
+
         if (!sender.getConnections().contains(receiver)) {
             throw new IllegalArgumentException("Le destinataire n’est pas dans vos connexions.");
         }
