@@ -17,6 +17,9 @@ public class User {
     @Column(nullable = false, length = 25, unique = true)
     private String username;
 
+    @Column(nullable = false)
+    private String role = "USER";
+
     @Column(nullable = false, length = 70, unique = true)
     private String email;
 
@@ -67,6 +70,14 @@ public class User {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public String getEmail() {
